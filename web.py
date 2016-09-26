@@ -2,6 +2,7 @@ import datetime
 import json
 from flask import request, jsonify
 from timeline import *
+from improvement import *
 
 def get_employees():
     q =  " prefix foaf:   <http://xmlns.com/foaf/spec/> "
@@ -114,3 +115,51 @@ def get_all_occupations():
     helpers.log("recent")
     return jsonify(jobj)
 
+
+@app.route('/improvements/')
+def get_inprovement():
+    today = datetime.datetime.today().date()
+
+    q = """
+        prefix esco: <http://data.europa.eu/esco/model#>
+        prefix skosxl: <http://www.w3.org/2008/05/skos-xl#>
+        prefix default: <http://example.org/MyCompany/>
+        prefix foaf: <http://xmlns.com/foaf/spec/>
+        prefix mu:  <http://mu.semte.ch/vocabularies/core/>
+        prefix skos: <http://www.w3.org/2004/02/skos/core#>
+
+        SELECT distinct ?skillName ?skillID ?empName ?empID ?sDate ?aDate ?eDate
+        WHERE{
+            ?employee default:hasSkill ?skillemp.
+            ?employee mu:uuid ?empID.
+            ?employee foaf:name ?empName.
+
+            ?skillemp esco:hasSkill ?skill.
+            ?skill mu:uuid ?skillID.
+            ?skill skos:prefLabel ?skillName.
+            ?skillemp default:acquired ?aDate.
+
+            ?employee default:function ?function.
+            ?function default:startDate ?sDate.
+
+            OPTIONAL{
+                    ?function default:endDate ?date.
+             } BIND(IF(BOUND(?date), ?date, %s ) AS ?eDate)
+        }
+        """ % (sparql_escape(today))
+
+    data = helpers.query(q)
+    bindings = data["results"]["bindings"]
+    for b in bindings:
+        acquired = b["aDate"]["value"]
+        start = b["sDate"]["value"]
+        end = b["eDate"]["value"]
+        if start <= acquired <= end:
+            EmployeeImprovements(b["empID"]["value"], b["empName"]["value"])
+            SkillImprovements(b["skillID"]["value"], b["skillName"]["value"])
+
+    if Improvement.has_elements():
+        return jsonify({'data': Improvement.get_all_improvements()})
+        #return jsonify(data)
+    else:
+        return jsonify({'data': []})

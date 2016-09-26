@@ -9,6 +9,6 @@ dr rm my-workforce
 dr run -p 5000:80 \
      --link muproject_db_1:database \
      -e MODE=development \
-     --volume=/home/sam/PycharmProjects/MyWorkForce/:/app \
+     --volume=/home/sam/PycharmProjects/my-workforce/:/app \
      --name "my-workforce" my-workforce
 
