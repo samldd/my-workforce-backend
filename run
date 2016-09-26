@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo ------ removing image ------ 1/3.
+dr rmi -f my-workforce
+echo ------ building image ------ 2/3.
+docker build --rm -t my-workforce .
+echo ------ running image  ------ 3/3.
+dr rm my-workforce
+dr run -p 5000:80 \
+     --link muproject_db_1:database \
+     -e MODE=development \
+     --volume=/home/sam/PycharmProjects/MyWorkForce/:/app \
+     --name "my-workforce" my-workforce
+
