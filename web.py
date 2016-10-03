@@ -3,6 +3,7 @@ import json
 from flask import request, jsonify
 from timeline import *
 from improvement import *
+from skill_allocation import *
 
 def get_employees():
     q =  " prefix foaf:   <http://xmlns.com/foaf/spec/> "
@@ -32,7 +33,7 @@ def get_skill_timeline():
                  GRAPH <http://mu.semte.ch/application>{
                      ?employee default:hasSkill ?skillemp.
                      ?employee foaf:name ?name.
-                     ?skillemp esco:Skill <%s>.
+                     ?skillemp esco:hasSkill <%s>.
                      ?employee default:function ?function.
                      ?function default:startDate ?sDate.
                      ?skillemp default:acquired ?aDate.
@@ -66,7 +67,7 @@ def all_skills():
             WHERE{
                 GRAPH <http://mu.semte.ch/application>{
                     ?skill a esco:Skill.
-                    ?skill ^esco:Skill ?se.
+                    ?skill ^esco:hasSkill ?se.
                     ?se a default:EmployeeSkill.
                     ?skill skos:prefLabel ?literal.
                     ?skill <http://mu.semte.ch/vocabularies/core/uuid> ?id.
@@ -96,7 +97,7 @@ def get_all_occupations():
             WHERE{
                 GRAPH <http://mu.semte.ch/application>{
                     ?so a default:EmployeeFunction.
-                    ?so esco:Occupation ?occ.
+                    ?so esco:hasOccupation ?occ.
                     ?occ skos:prefLabel ?literal.
                     ?occ <http://mu.semte.ch/vocabularies/core/uuid> ?id.
                 }
@@ -128,11 +129,15 @@ def get_inprovement():
         prefix mu:  <http://mu.semte.ch/vocabularies/core/>
         prefix skos: <http://www.w3.org/2004/02/skos/core#>
 
-        SELECT distinct ?skillName ?skillID ?empName ?empID ?sDate ?aDate ?eDate
+        SELECT distinct ?skillName ?skillID ?empName ?empID ?occ ?sDate ?aDate ?eDate (str(?occN) as ?occupation)
         WHERE{
             ?employee default:hasSkill ?skillemp.
             ?employee mu:uuid ?empID.
             ?employee foaf:name ?empName.
+
+            ?employee default:function ?function.
+            ?function esco:hasOccupation ?occ.
+            ?occ skos:prefLabel ?occN.
 
             ?skillemp esco:hasSkill ?skill.
             ?skill mu:uuid ?skillID.
@@ -155,11 +160,10 @@ def get_inprovement():
         start = b["sDate"]["value"]
         end = b["eDate"]["value"]
         if start <= acquired <= end:
-            EmployeeImprovements(b["empID"]["value"], b["empName"]["value"])
+            EmployeeImprovements(b["empID"]["value"], b["empName"]["value"], b["occupation"]["value"])
             SkillImprovements(b["skillID"]["value"], b["skillName"]["value"])
 
     if Improvement.has_elements():
         return jsonify({'data': Improvement.get_all_improvements()})
-        #return jsonify(data)
     else:
         return jsonify({'data': []})
